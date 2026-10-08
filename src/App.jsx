@@ -87,13 +87,17 @@ function App() {
 
   const handleRegister = async (formData) => {
     try {
-      const { data: existing } = await supabase
+      const { data: existing, error: checkError } = await supabase
         .from('ds_students')
         .select('id')
         .eq('student_number', formData.studentNumber)
-        .single();
+        .maybeSingle();
 
-      if (existing) return false;
+      if (checkError) {
+        console.error('Register check error:', checkError);
+        return { ok: false, reason: 'error', message: checkError.message };
+      }
+      if (existing) return { ok: false, reason: 'exists' };
 
       const { data, error } = await supabase
         .from('ds_students')
@@ -107,7 +111,12 @@ function App() {
         .select()
         .single();
 
-      if (error) return false;
+      if (error) {
+        console.error('Register insert error:', error);
+        // 23505 = unique violation (number registered at the same moment)
+        if (error.code === '23505') return { ok: false, reason: 'exists' };
+        return { ok: false, reason: 'error', message: error.message };
+      }
 
       const userData = {
         id: data.id,
@@ -121,10 +130,10 @@ function App() {
       setUser(userData);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
       setTimeout(() => setCurrentPage('home'), 1500);
-      return true;
+      return { ok: true };
     } catch (err) {
       console.error('Register error:', err);
-      return false;
+      return { ok: false, reason: 'error', message: err.message };
     }
   };
 
