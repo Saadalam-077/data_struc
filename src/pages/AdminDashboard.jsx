@@ -14,7 +14,7 @@ const AdminDashboard = ({ onLogout }) => {
     setLoading(true);
     const { data, error } = await supabase
       .from('ds_students')
-      .select('*')
+      .select('id, student_name, student_number, section_number, progress')
       .order('student_name');
     
     if (!error && data) {
