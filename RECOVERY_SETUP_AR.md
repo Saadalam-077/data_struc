@@ -8,12 +8,17 @@
 - لا تُحذف حسابات الطلاب ولا تقدمهم، وكلمات المرور الحالية تبقى تعمل.
 
 ## خطوات التفعيل
-1. خذ نسخة احتياطية من قاعدة البيانات.
-2. Supabase → **SQL Editor** → انسخ محتوى `supabase_password_recovery.sql` كاملًا ونفّذه.
-3. ادمج التعديلات في `main` لينشر GitHub Pages النسخة الجديدة.
-4. اختبر: دخول بكلمة مرور طالب حالية، ثم استعادة بالرمز `1234567890`، ثم تسجيل طالب جديد.
+**تلقائيًا:** سير العمل `.github/workflows/supabase.yml` (Deploy Supabase) يطبّق ملفات
+`supabase/migrations/*.sql` على قاعدة البيانات عند كل دمج في `main` يغيّر مجلد `supabase/`،
+أو يدويًا من **Actions → Deploy Supabase → Run workflow**.
+يحتاج مرة واحدة السر `SUPABASE_ACCESS_TOKEN` في:
+GitHub → **Settings → Secrets and variables → Actions → New repository secret**
+(نفس التوكن المستخدم في مستودع com_prog، من supabase.com → Account preferences → Access Tokens).
 
-> نفّذ ملف SQL **قبل** نشر الموقع، وإلا سيتعذر تسجيل الدخول.
+**يدويًا (بديل):** Supabase → **SQL Editor** → انسخ محتوى
+`supabase/migrations/20261112000000_password_hashing.sql` ونفّذه.
+
+بعدها اختبر: دخول بكلمة مرور طالب حالية، ثم استعادة بالرمز `1234567890`، ثم تسجيل طالب جديد.
 
 ## تنبيه أمني
 الرمز موحّد لجميع الطلاب ويمكن إعادة استخدامه؛ من يعرف رقمًا جامعيًا والرمز يستطيع تغيير كلمة مرور ذلك الطالب.
