@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import RecoveryPage from './pages/RecoveryPage';
 import HomePage from './pages/HomePage';
 import ProfilePage from './pages/ProfilePage';
 import AdminDashboard from './pages/AdminDashboard';
@@ -55,14 +56,11 @@ function App() {
     }
 
     try {
-      const { data, error } = await supabase
-        .from('ds_students')
-        .select('*')
-        .eq('student_number', studentNumber)
-        .eq('password', password)
-        .single();
-
-      if (error || !data) return false;
+      const { data, error } = await supabase.rpc('ds_student_login', {
+        p_student_number: studentNumber.trim(),
+        p_password: password
+      });
+      if (error || !data?.success) return false;
 
       const progress = data.progress || {};
       const { grade, avg } = calculateGrade(progress);
@@ -85,38 +83,33 @@ function App() {
     }
   };
 
+  const handlePasswordRecovery = async (studentNumber, recoveryCode, newPassword) => {
+    const { data, error } = await supabase.rpc('ds_reset_student_password', {
+      p_student_number: studentNumber.trim(),
+      p_recovery_code: recoveryCode.trim(),
+      p_new_password: newPassword
+    });
+    if (error) {
+      console.error('Password recovery error:', error);
+      return false;
+    }
+    return data === true;
+  };
+
   const handleRegister = async (formData) => {
     try {
-      const { data: existing, error: checkError } = await supabase
-        .from('ds_students')
-        .select('id')
-        .eq('student_number', formData.studentNumber)
-        .maybeSingle();
-
-      if (checkError) {
-        console.error('Register check error:', checkError);
-        return { ok: false, reason: 'error', message: checkError.message };
-      }
-      if (existing) return { ok: false, reason: 'exists' };
-
-      const { data, error } = await supabase
-        .from('ds_students')
-        .insert([{
-          student_name: formData.studentName,
-          student_number: formData.studentNumber,
-          section_number: formData.sectionNumber,
-          password: formData.password,
-          progress: {}
-        }])
-        .select()
-        .single();
-
+      const { data: result, error } = await supabase.rpc('ds_register_student', {
+        p_student_name: formData.studentName.trim(),
+        p_student_number: formData.studentNumber.trim(),
+        p_section_number: formData.sectionNumber,
+        p_password: formData.password
+      });
       if (error) {
-        console.error('Register insert error:', error);
-        // 23505 = unique violation (number registered at the same moment)
-        if (error.code === '23505') return { ok: false, reason: 'exists' };
+        console.error('Register error:', error);
         return { ok: false, reason: 'error', message: error.message };
       }
+      if (!result?.success) return { ok: false, reason: 'exists' };
+      const data = result.student;
 
       const userData = {
         id: data.id,
@@ -184,6 +177,9 @@ function App() {
   }
   if (currentPage === 'register') {
     return <RegisterPage onRegister={handleRegister} onNavigate={handleNavigate} />;
+  }
+  if (currentPage === 'recover') {
+    return <RecoveryPage onRecover={handlePasswordRecovery} onNavigate={handleNavigate} />;
   }
   if (currentPage === 'admin' && user?.isAdmin) {
     return <AdminDashboard onLogout={handleLogout} />;
